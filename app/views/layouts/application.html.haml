@@ -1,0 +1,26 @@
+-# Document Start
+!!!
+%html
+	%head
+		%title Torn
+		= stylesheet_link_tag    "application", media: "all", "data-turbolinks-track" => true
+		= javascript_include_tag "application", "data-turbolinks-track" => true
+		= csrf_meta_tags
+
+	-# Start Body
+	%body
+		-# Page Loader
+		-##loadingWrap
+		-#	#loader
+		-#		.spinner.icon-spinner-3
+		-#		%p Loading
+		-# Start Wrap
+		#wrap
+			-# Import Nav Wrap Partial
+			= yield :navbar
+
+			-# Import Body Of View
+			= yield :body
+
+			-# Import Footer
+			= yield :footer
