@@ -6,26 +6,7 @@
 
 = content_for :body do
   #mapsWrap
-    #map
-      Map
-
-      :plain
-        <script>
-        handler = Gmaps.build('Google');
-        handler.buildMap({
-          provider: {},
-          internal: {
-            id: 'map'
-          }
-        }, function() {
-          return handler.map.centerOn({
-            lat: -31.9790563,
-            lng: 115.928047
-          });
-        });
-        handler.getMap().setZoom(10);
-        handler.getMap().streetViewControl = false;
-        </script>
+    Google Content Here.
 
 = content_for :footer do
   = render :partial => "shared/footer"
