@@ -50,6 +50,7 @@ GEM
     colorize (0.7.3)
     erubis (2.7.0)
     execjs (2.2.1)
+    gmaps4rails (2.1.2)
     haml (4.0.4)
       tilt
     hike (1.2.3)
@@ -137,6 +138,7 @@ DEPENDENCIES
   bcrypt (~> 3.1.7)
   capistrano-rails
   coffee-rails (~> 4.0.0)
+  gmaps4rails
   haml (= 4.0.4)
   jbuilder (~> 2.0)
   jquery-rails
