@@ -1,5 +1,7 @@
 Rails.application.routes.draw do
 
+  get 'isochrone/generate'
+
   # Default area of website
   root to: 'home#index'
 
