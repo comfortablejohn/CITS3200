@@ -1,12 +1,14 @@
 Rails.application.routes.draw do
 
-  get 'isochrone/generate'
-
   # Default area of website
   root to: 'home#index'
 
   # Defining home/index
   get 'home/index'
+  get 'isochrone/generate'
+
+  # Match POST for AJAX requests
+  match '/isochrone/generate' => 'isochrone#generate', via: :post
 
   #get 'home/index'
 
