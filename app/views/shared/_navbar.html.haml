@@ -7,4 +7,4 @@
   = form_for :isochrone, :html => { :id => "tesform" }, :url => { :controller => "isochrone", :action => "generate" } do |f|
     = label_tag :title, "Title", :class => "header_label"
     = text_field_tag :title, nil, :placeholder => "Test AJAX."
-    = submit_tag "TEST!", :id => "formsub", :data => { :disable_with => "Please wait..." }
+    = submit_tag "TEST!", :id => "formsub" #, :data => { :disable_with => "Please wait..." }
