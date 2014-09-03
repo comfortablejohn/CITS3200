@@ -23,7 +23,7 @@ function update_loc_list() {
 
 function initialize() {
   var myOptions = {
-    center: new google.maps.LatLng(-32.084448281683706, 115.86180663108826),
+    center: new google.maps.LatLng(53.349783, -6.260101),
     zoom: 14,
     disableDoubleClickZoom: true,
     mapTypeId: google.maps.MapTypeId.ROADMAP
@@ -103,6 +103,9 @@ function polyLine(points) {
 function placeMarker(position, title, ani) {
   if (ani) a = ani;
   else a = null;
+  ORIGIN = position;
+  // console.log('origin: ' );
+  // console.log(ORIGIN);
   var marker = new google.maps.Marker({
     position: position,
     map: map,
@@ -302,6 +305,26 @@ function sleep(milliseconds) {
 //    Here starts Isochrone things
 //
 /*****************************************************************************/
+var ORIGIN = null;
+
+function getOrigin() {
+  if (ORIGIN != null) {
+    console.log(ORIGIN);
+    return ORIGIN;
+  } else {
+    console.log('ORIGIN has not been set');
+  }
+}
+
+/**
+ * returns time limit in seconds based on input in minutes
+ * @return {[type]} [description]
+ */
+function getTimeLimit() {
+  var val = parseInt(document.getElementById('timeLimit').value)*60;
+  console.log('getting time limit: ' + val);
+  return val;
+}
 
 /** 
  * Calculate walking distance based on inputs for walking speed, time restriction etc. 
@@ -319,6 +342,10 @@ function getWalkingRadius(time) {
 
   return v*t; // (m) also radius of circle
 }
+
+// function getDistance(velocity, time) {
+
+// }
 
 /**
  * Draws circle based on estimated distance reachable in straight line
@@ -537,10 +564,16 @@ function projectDistanceToWorldCoordinates(distance) {
  *                                      boundary
  */
 function getCircleBoundaryPoints(centre, radius) {
-  centre = new google.maps.LatLng(allMarkers[0].position.lat(), allMarkers[0].position.lng());
+  console.log('centre: ');
+  console.log(centre);
+  console.log('radius: ' + radius);
+
+  radius = projectDistanceToWorldCoordinates(radius);
+
+  // centre = new google.maps.LatLng(allMarkers[0].position.lat(), allMarkers[0].position.lng());
 
   // TODO: change this to radius/DISTANCE_RATIO once general solution is implemented
-  radius = projectDistanceToWorldCoordinates(getWalkingRadius(60*60));
+  // radius = projectDistanceToWorldCoordinates(getWalkingRadius(60*60));
 
   var thetaStep = Math.PI/20;
 
@@ -549,7 +582,6 @@ function getCircleBoundaryPoints(centre, radius) {
   var boundaryPoints = [];
 
   for (var theta = 0; theta < Math.PI*2; theta += thetaStep) {
-    console.log(theta);
     var x = cc.x + radius*Math.cos(theta);
     var y = cc.y + radius*Math.sin(theta);
     // console.log('x: ' + x + ' y: ' + y);
@@ -565,21 +597,23 @@ function getCircleBoundaryPoints(centre, radius) {
 }
 
 
-function sendRouteRequest(service, destination, callback) {
+function sendRouteRequest(service, origin, destination, callback) {
   var success = false;
   // callback();
   service.route({
-    origin: allMarkers[0].position, 
+    origin: origin, 
     destination: destination,
     travelMode: travelMode
   }, function(results, status) {
     if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
       // console.log('sleeping')
-      var sleepTime = 100 // ms 
-      sleep(sleepTime);
+      // var sleepTime = 100 // ms 
+      // sleep(sleepTime);
       // console.log('done sleeping')
       // sendRouteRequest(service, destination);
       // success = false;
+      console.log(status);
+      callback(null, false, status);
     }
 
     if (status == google.maps.DirectionsStatus.NOT_FOUND) {
@@ -603,15 +637,15 @@ function sendRouteRequest(service, destination, callback) {
       console.log('got directions back')
       success = true;
       // return routes[0]
+      callback(results.routes[0], success, status);
       // callback();
     } 
-    callback(routes[0], success, status);
     // console.log('[directionsToMultiDestinations()] route could not be found');
   });
 }
 
 // global routes list for directionsToMultiDestinations and things
-var routes = [];
+var ROUTES = [];
 var gotRoute = false;
 
 /**
@@ -620,9 +654,9 @@ var gotRoute = false;
  * @param  {[type]} destinations [description]
  * @return {[type]}              [description]
  */
-function directionsToMultiDestinations(destinations) {
+function directionsToMultiDestinations(origin, destinations, callback) {
   // destinations = []
-  destinations = getCircleBoundaryPoints();
+  // destinations = getCircleBoundaryPoints();
   console.log('destinations length: ' + destinations.length)
   // for (i = 0; i < _destinations.length; i++) {
     // destinations.push(new google.maps.LatLng(_destinations[i][0], _destinations[i][1]))
@@ -634,25 +668,77 @@ function directionsToMultiDestinations(destinations) {
 
   // routes = []
 
-  for (i = 0; i < destinations.length; i++) {
-    gotRoute = false;
-    // routes.push(sendRouteRequest(service, destinations[i]));
-    // while (!gotRoute) {
-    sendRouteRequest(service, destinations[i], function(route, success, status) {
-      sleep(Math.random() * (1500 - 800) + 800);
+  // try to get around sending all the requests at pretty much the same time
+  // with custom loop function
+  var i = 0;
+  var loop = function(list) {
+    sendRouteRequest(service, origin, list[i], function(route, success, status) {
+      i++;
       if (success) {
-        routes.push(route);
+        ROUTES.push(route);
         gotRoute = true;
       }  else if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
-        console.log(status)
+        console.log('got over query limit');
+        console.log(status);
         gotRoute = false;
+        sleep(Math.random() * (300 - 100) + 100);
+        i--;
       }
+
+      if (i < list.length) {
+        loop(list);
+      }
+
     });
-      // break;
-    // }
-    // if (i > 0) break;
+
   }
-  console.log('[directionsToMultiDestinations] done');
-  console.log('[directionsToMultiDestinations] #routes = ' + JSON.parse(JSON.stringify(routes.length))  )
-  return routes;
+
+  loop(destinations);
+
+  // for (i = 0; i < destinations.length; i++) {
+  //   gotRoute = false;
+  //   // routes.push(sendRouteRequest(service, destinations[i]));
+  //   // while (!gotRoute) {
+  //   // sleep(Math.random() * (1500 - 800) + 800);
+  //   sendRouteRequest(service, origin, destinations[i], function(route, success, status) {
+  //     if (success) {
+  //       ROUTES.push(route);
+  //       gotRoute = true;
+  //     }  else if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
+  //       console.log(status)
+  //       gotRoute = false;
+  //     }
+  //   });
+  //     // break;
+  //   // }
+  //   // if (i > 0) break;
+  // }
+  // console.log('[directionsToMultiDestinations] done');
+  // console.log('[directionsToMultiDestinations] #routes = ' + JSON.parse(JSON.stringify(routes.length))  )
+  // return routes;
+  callback(ROUTES);
+}
+
+var MAX_DRIVE_VEL = 30.5 // m/s
+
+function drivingIsochrone(origin, time) {
+  // origin = new google.maps.LatLng(allMarkers[0].position.lat(), allMarkers[0].position.lng());
+  // origin = all
+  ROUTES = []; // re-initialize routes list
+  // time = 15*60;
+  var radius = MAX_DRIVE_VEL*time;
+  // console.log('radius: ' + radius);
+  var boundaryPoints = getCircleBoundaryPoints(origin, radius);
+  // var routes = []
+  directionsToMultiDestinations(origin, boundaryPoints, function(routes) {
+    console.log('printing steps: ');
+    for (i = 0; i < routes.length; i++) {
+      console.log(routes.steps.length);
+    }
+  });
+
+}
+
+function walkingIsochrone() {
+
 }

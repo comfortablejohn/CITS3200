@@ -21,6 +21,11 @@
           <table>
             <tr>
               <td>
+                <input type="text" id="timeLimit" value="15" />
+              </td>
+            </tr>
+            <tr>
+              <td>
                 <input type="button" id="clearButton" value="clear points"/>
               </td>
             </tr>
@@ -68,6 +73,8 @@
     d = document.getElementById('nearestRoad');
     e = document.getElementById('circleBoundary');
     f = document.getElementById('multiDest');
+    // g = document.getElementById('timeLimit');
+
     a.addEventListener('click', clear);
     b.addEventListener('click', function() {
       drawWalkingIsochrone();
@@ -80,10 +87,12 @@
       findNearestPlace();
     });
     e.addEventListener('click', function() {
-      getCircleBoundaryPoints();
+      getCircleBoundaryPoints(getOrigin(), getWalkingRadius(getTimeLimit()));
     });
     f.addEventListener('click', function() {
-      directionsToMultiDestinations();
+      // directionsToMultiDestinations();
+      drivingIsochrone(getOrigin(), getTimeLimit());
+      // drivingIsochrone();
     });
     // c.addEventListener('click', function() {
     //   origin.x = 1000000000;
