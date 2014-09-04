@@ -575,7 +575,10 @@ function getCircleBoundaryPoints(centre, radius) {
   // TODO: change this to radius/DISTANCE_RATIO once general solution is implemented
   // radius = projectDistanceToWorldCoordinates(getWalkingRadius(60*60));
 
-  var thetaStep = Math.PI/20;
+  // var resolution = 20;
+  var resolution = 5;
+
+  var thetaStep = Math.PI/resolution;
 
   var cc = map.getProjection().fromLatLngToPoint(centre);
 
@@ -588,7 +591,7 @@ function getCircleBoundaryPoints(centre, radius) {
     var pp = new google.maps.Point(x, y);
     var p = map.getProjection().fromPointToLatLng(pp);
     // place marker for debugging
-    placeMarker(p, theta.toString(), true);
+    // placeMarker(p, theta.toString(), true);
     // console.log(p)
     boundaryPoints.push(p);
   }
@@ -599,54 +602,86 @@ function getCircleBoundaryPoints(centre, radius) {
 
 function sendRouteRequest(service, origin, destination, callback) {
   var success = false;
-  // callback();
+
   service.route({
     origin: origin, 
     destination: destination,
     travelMode: travelMode
   }, function(results, status) {
     if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
-      // console.log('sleeping')
-      // var sleepTime = 100 // ms 
-      // sleep(sleepTime);
-      // console.log('done sleeping')
-      // sendRouteRequest(service, destination);
-      // success = false;
       console.log(status);
       callback(null, false, status);
     }
 
     if (status == google.maps.DirectionsStatus.NOT_FOUND) {
       console.log('[directionsToMultiDestinations()] something was wrong with the origin or destination');
-      // break;
+      callback(null, false, status);
     }
 
     if (status == google.maps.DirectionsStatus.ZERO_RESULTS) {
       console.log('[directionsToMultiDestinations()] route could not be found');
-      // continue;
+      callback(null, false, status);
     }
 
     if (status == google.maps.DirectionsStatus.OK) {
-      // routes.push(results.routes);
       console.log(results.routes[0].legs[0].duration)
-      dr = new google.maps.DirectionsRenderer({
-        directions: results,
-        map: map 
-        // suppressWayPoints: true
-      });
+      
+      /* uncomment the following if you want to render the directions for
+            debugging: */
+      // dr = new google.maps.DirectionsRenderer({
+      //   directions: results,
+      //   map: map
+      // });
+      
       console.log('got directions back')
       success = true;
-      // return routes[0]
       callback(results.routes[0], success, status);
-      // callback();
     } 
-    // console.log('[directionsToMultiDestinations()] route could not be found');
   });
+
 }
 
 // global routes list for directionsToMultiDestinations and things
 var ROUTES = [];
 var gotRoute = false;
+
+function makeBoundaryFromRoutes(points) {
+  // console.log(routes);
+  poly = new google.maps.Polygon({
+    paths: points, 
+    map: map
+  });
+}
+
+function walkRoutes(r) {
+  // console.log('printing steps: ');
+  console.log(r);
+  steps = r.legs[0].steps;
+  var i = 0;
+  var totalTime = 0;
+  var isochroneBoundary = [];
+  var loop = function(s) {
+    i++;
+
+    totalTime += s[i].duration.value;
+
+    if (totalTime >= timeLimit) {
+      isochroneBoundary.push(s[i].end_location);
+      placeMarker(s[i].end_location, 'boundary: ' + totalTime/60);
+      return;
+    }
+
+    if (i < s.length) {
+      loop(s);
+    }
+  } 
+
+  loop(steps);
+  // for (i = 0; i < routes.length; i++) {
+    // console.log(routes[i].legs);
+  // }
+  makeBoundaryFromRoutes(isochroneBoundary);
+}
 
 /**
  * Returns array of routes from origin to all points in destinations array 
@@ -655,33 +690,29 @@ var gotRoute = false;
  * @return {[type]}              [description]
  */
 function directionsToMultiDestinations(origin, destinations, callback) {
-  // destinations = []
-  // destinations = getCircleBoundaryPoints();
+
   console.log('destinations length: ' + destinations.length)
-  // for (i = 0; i < _destinations.length; i++) {
-    // destinations.push(new google.maps.LatLng(_destinations[i][0], _destinations[i][1]))
-    // destinations.push()
-  // }
 
   service = new google.maps.DirectionsService();
   travelMode = google.maps.DirectionsTravelMode.DRIVING;
 
-  // routes = []
-
   // try to get around sending all the requests at pretty much the same time
-  // with custom loop function
+  // with custom recursive loop function
   var i = 0;
   var loop = function(list) {
     sendRouteRequest(service, origin, list[i], function(route, success, status) {
       i++;
       if (success) {
         ROUTES.push(route);
-        gotRoute = true;
+        walkRoutes(route);
       }  else if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
         console.log('got over query limit');
         console.log(status);
-        gotRoute = false;
-        sleep(Math.random() * (300 - 100) + 100);
+
+        // delay sending next request so that it gets through.
+        var sleepTime = 5000; // ms
+        sleep(sleepTime);
+
         i--;
       }
 
@@ -690,34 +721,16 @@ function directionsToMultiDestinations(origin, destinations, callback) {
       }
 
     });
-
   }
 
+  // start the loop
   loop(destinations);
 
-  // for (i = 0; i < destinations.length; i++) {
-  //   gotRoute = false;
-  //   // routes.push(sendRouteRequest(service, destinations[i]));
-  //   // while (!gotRoute) {
-  //   // sleep(Math.random() * (1500 - 800) + 800);
-  //   sendRouteRequest(service, origin, destinations[i], function(route, success, status) {
-  //     if (success) {
-  //       ROUTES.push(route);
-  //       gotRoute = true;
-  //     }  else if (status == google.maps.DirectionsStatus.OVER_QUERY_LIMIT) {
-  //       console.log(status)
-  //       gotRoute = false;
-  //     }
-  //   });
-  //     // break;
-  //   // }
-  //   // if (i > 0) break;
-  // }
-  // console.log('[directionsToMultiDestinations] done');
-  // console.log('[directionsToMultiDestinations] #routes = ' + JSON.parse(JSON.stringify(routes.length))  )
-  // return routes;
-  callback(ROUTES);
+  // callback(ROUTES[ROUTES.length - 1]);
+  return;
 }
+
+
 
 var MAX_DRIVE_VEL = 30.5 // m/s
 
@@ -727,15 +740,12 @@ function drivingIsochrone(origin, time) {
   ROUTES = []; // re-initialize routes list
   // time = 15*60;
   var radius = MAX_DRIVE_VEL*time;
-  // console.log('radius: ' + radius);
+
+  timeLimit = time;
+
   var boundaryPoints = getCircleBoundaryPoints(origin, radius);
-  // var routes = []
-  directionsToMultiDestinations(origin, boundaryPoints, function(routes) {
-    console.log('printing steps: ');
-    for (i = 0; i < routes.length; i++) {
-      console.log(routes.steps.length);
-    }
-  });
+
+  directionsToMultiDestinations(origin, boundaryPoints);
 
 }
 

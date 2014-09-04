@@ -1,0 +1,26 @@
+||THINGS THAT NEED TO BE DONE||
+===============================
+
+Testing
+=======
+
+  + Compare isochrone boundary times are correctly calculated from 
+    the directions routes. Can do this by getting location and time of boundary 
+    point by hovering, and manually doing directions in 
+    Google Maps from origin, then comparing the durations/distances etc.
+  + Test ranges of time limits (large and small); see what breaks. 
+
+Web Application
+===============
+
+  * Really need to start integrating the algorithm dev with the front end - 
+    I can see this becoming messy if we leave it to the last minute. Need to 
+    start working with the parameter input menus etc.
+
+  + Need to keep track of isochrone origins - maybe a dynamic list? ability to
+    delete them? Would be good to select which marker we want to calculate 
+    isochrone for.
+      - then have also ability to delete its isochrone (button which removes set
+        of boundary points)
+  + Check boxes for driving/walking/train (currently only driving implemented)
+  + Reset button to start fresh (backend will remove all points etc.)
